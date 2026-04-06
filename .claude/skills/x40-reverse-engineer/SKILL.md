@@ -21,18 +21,41 @@ binwalk -eM firmware.pkg
 ```
 
 ### Ghidra (headless binary analysis)
+
+Ghidra runs on the Pi5 so Paperclip agents can script it. The project must be rebuilt from the binaries in `opencocktail-firmware` since the original 11GB project is too large for git.
+
 ```bash
-# Download and set up Ghidra (requires Java 17+)
-# For headless analysis (no GUI needed):
-ghidra/support/analyzeHeadless /tmp/ghidra_projects ProjectName \
-  -import binary_file \
+# Install Ghidra on Pi5 (requires Java 17+)
+sudo apt install openjdk-17-jdk
+# Download Ghidra from https://ghidra-sre.org and extract to ~/ghidra
+
+# Initial import — run once, takes a while on Pi5
+~/ghidra/support/analyzeHeadless ~/opencocktail-firmware/ghidra_project X40 \
+  -import ~/opencocktail-firmware/X40_R0076/extractions/.../ubifs-root/tango3/qtdfb/bin/euterfe \
   -processor MIPS:LE:32:default \
-  -postScript ExportFunctions.java output.csv
+  -cspec default
+
+# Import X50Pro binary for cross-reference (extract from pkg first)
+# binwalk -e ~/opencocktail-firmware/X50Pro_R1789/X50Pro-CA-1.0.0.r1789.pkg
+# Then import the main binary with -processor ARM:LE:64:v8A
+
+# Headless queries (fast — use these from Paperclip tasks)
+~/ghidra/support/analyzeHeadless ~/opencocktail-firmware/ghidra_project X40 \
+  -process euterfe \
+  -noanalysis \
+  -postScript ExportFunctions.java /tmp/functions.csv
 
 # For the X40 euterfe binary specifically:
 # Processor: MIPS:LE:32:default (MIPS32 Release 2, Little Endian)
 # The binary is dynamically linked, stripped, uses Qt framework
 ```
+
+**Pi5 Ghidra setup checklist:**
+1. Clone `opencocktail-firmware` to the Pi5
+2. Install Java 17 and Ghidra
+3. Run the initial analyzeHeadless import (expect 30-60 min for euterfe)
+4. The `ghidra_project/` directory lives on the Pi5 only — do not commit it
+5. All subsequent queries use `-noanalysis` flag (fast, seconds not minutes)
 
 ### Strings and basic analysis
 ```bash
